@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "netrunner-db"
+version = "0.1.0"
+description = "export Netrunner card data to ElasticSearch."
+authors = ["Eric Li <eric03742@foxmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
