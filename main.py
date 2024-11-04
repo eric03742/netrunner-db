@@ -1,7 +1,9 @@
-import csv
+import dotenv
 import json
 import logging
 import os
+
+from meilisearch import Client
 
 NETRUNNER_EN_DATA = 'data/en/pack'
 NETRUNNER_CN_DATA = 'data/cn/json/translations/zh-hans/pack'
@@ -104,17 +106,39 @@ def read_translation(bundles: list[str], collector: dict[str, dict[str, str]]) -
     return result
 
 
+def write_document(cards: list[dict[str, str]]):
+    conf = dotenv.dotenv_values()
+    client = Client(f'http://{conf["MEILISEARCH_HOST"]}:{conf["MEILISEARCH_PORT"]}', conf["MASTER_KEY"])
+    logging.info(f'server status: {client.is_healthy()}')
+    index_uid = 'netrunner'
+    stat = client.get_all_stats()
+    if index_uid not in stat['indexes']:
+        logging.info(f'create index: {index_uid}!')
+        client.create_index(index_uid)
+        index = client.get_index(index_uid)
+        index.update('code')
+        index.update_searchable_attributes([
+            'title',
+            'stripped_title',
+            'cn_title',
+        ])
+        index.update_sortable_attributes([
+            'code',
+        ])
+
+    index = client.get_index(index_uid)
+    index.add_documents(cards)
+
+    # logging.info(f'write index: {stat["numberOfDocuments"]} entries!')
+
+
 def run():
     logging.basicConfig(level=logging.INFO, encoding='utf-8')
-
     bundles: list[str] = read_bundle()
     schema: list[str] = create_schema(bundles)
     cards: dict[str, dict[str, str]] = read_card(bundles, schema)
     result: list[dict[str, str]] = read_translation(bundles, cards)
-
-    with open('cards.json', 'w', encoding='utf-8') as f:
-        text = json.dumps(result, ensure_ascii=False)
-        f.write(text)
+    write_document(result)
 
 
 if __name__ == '__main__':
